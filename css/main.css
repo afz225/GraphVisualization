@@ -1,0 +1,39 @@
+html, body {
+	height: 100%;
+}
+
+.menu-bar {
+	overflow: hidden;
+	position: fixed;
+	top: 0;
+	width: 100%;
+	background-color: #d3d3d3;
+}
+
+.menu-bar a {
+	padding: 14px 16px;
+	color: #121212;
+	display: block;
+	float: left;
+	text-align: center;
+	text-decoration: none;
+}
+
+.menu-bar a:hover {
+	background-color: #121212;
+	color: #d3d3d3;
+}
+
+.main {
+	margin-top: 60px;
+	height: 100%;
+	width: 100%;
+	padding: 10%;
+}
+
+
+#canvas-window {
+	width: 80%;
+	height: 60%;
+	border: solid 2px black;
+}
