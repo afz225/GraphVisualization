@@ -1,55 +1,87 @@
-// class App{
-// 	constructor(state, )
-// }
 
-// function stateUpdate(state, action){
-// 	return Object.assign({}, state, action);
-// }
+// AddNode, AddEdge, RemoveComponent, Move, ChooseAlgorithm, Run
+
+// -------------------------------------------------Classes-------------------------------------------------------------------------
+
 class Graph{
 	constructor(nodes = [], edges = []){
 		this.nodes = nodes;
 		this.edges = edges;
 	}
-	
-	node(n){
-		return this.nodes[n];
-	}
 
 
 }
 
-class canvasGraph{
+class CanvasGraph{
 	constructor (graph){
 		this.dom = document.querySelector("canvas");
 		this.syncState(graph);
 	}
 
 	syncState(graph){
-		if (this.graph === graph) return;
+		if (this.graph == graph) return;
 		this.graph = graph;
+		this.refreshCanvas();
+	}
+
+	refreshCanvas() {
+		let displayHeight = this.dom.clientHeight;
+		let displayWidth = this.dom.clientWidth;
+
+		if (displayHeight != this.dom.height ||
+			displayWidth != this.dom.width){
+			this.dom.height = displayHeight;
+			this.dom.width = displayWidth;
+		}
 		drawGraph(this.graph, this.dom);
-	}
+		}
 
 
 }
 
-var draw = function() {
-	let g = new Graph( [{x:100, y:100}, {x: 300, y: 200}] , [{from: {x:100, y:100}, to: {x: 300, y: 200}}]);
-	let cg = new canvasGraph(g);
+
+
+class App{
+	constructor(state, config){
+		let {controls, dispatch} = config;
+		this.state = state;
+		this.canvas = new CanvasGraph(state.graph);
+		this.canvas.dom.onmousedown = event => this.mouse(event);
+		this.canvas.dom.ontouchstart = event => this.touch(event);
+		this.controls = controls.map(
+			control => new control(state, config)
+			)
+		this.syncState(this.state);
+	}
+
+	syncState(state){
+		this.state = state;
+		this.canvas.syncState(state.graph);
+		this.controls.forEach(control => control.syncState(state));
+	}
+
+	mouse(event){
+		let pos = {x: event.offsetX, y: event.offsetY};
+
+
+	}
+
+	touch(event){
+		var rect = event.target.getBoundingClientRect();
+		let pos = {x: event.touches[0].clientX-rect.left, y: event.touches[0].clientY-rect.top};
+		event.preventDefault();
+
+	}
+
 }
 
-let resizeCanvas = function(){
-	var canvas = document.querySelector("canvas");
-	fitCanvas(canvas);
-	draw();
-	function fitCanvas(canvas){
-		canvas.style.height = "100%";
-		canvas.style.width = "100%";
-		canvas.width = canvas.offsetWidth;
-		canvas.height = canvas.offsetHeight;
-	}
-	}
-resizeCanvas();
+
+
+
+
+// ---------------------------------------------Functions----------------------------------------------------------------
+
+
 
 function drawGraph(graph, canvas){
 	for (let edge of graph.edges){
@@ -82,3 +114,48 @@ function drawNode(node, canvas){
 	cx.fillStyle = "#008080";
 	cx.fill();
 }
+
+function stateUpdate(state, action){
+	return Object.assign({}, state, action);
+}
+
+
+
+// -------------------------------------------------Constants-------------------------------------------------------------------------
+
+const DEFAULTCONTROLS = [];
+
+const DEFAULTSTATE = {
+	graph: new Graph([{x:400,y:400}]),
+	control: undefined
+}
+
+// -------------------------------------------------Body-------------------------------------------------------------------------
+
+
+
+let app = new App(DEFAULTSTATE, 
+	{controls: DEFAULTCONTROLS,
+		dispatch: (action) =>{
+			stateUpdate(this.state, action);
+			syncState(this.state);
+		}
+	})
+
+
+
+var timeout;
+
+function refresh(){
+	if (!timeout){
+		timeout = setTimeout(()=>{
+			timeout = null;
+			app.canvas.refreshCanvas();
+		}, 50);
+	}
+}
+
+
+
+
+
