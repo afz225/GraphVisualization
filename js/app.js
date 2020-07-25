@@ -75,9 +75,25 @@ class CanvasGraph{
 	}
 
 	touch(event, inputHandler){
+		console.log("been");
 		var rect = event.target.getBoundingClientRect();
 		let pos = {x: event.touches[0].clientX-rect.left, y: event.touches[0].clientY-rect.top};
 		event.preventDefault();
+		let moveHandler = inputHandler(pos);
+		let move = (moveEvent)=>{
+			let npos = {x: moveEvent.touches[0].clientX-rect.left, y: moveEvent.touches[0].clientY-rect.top};
+			if (npos.x == pos.x && 
+				npos.y == pos.y)
+				return;
+			pos = npos;
+			moveHandler(pos);
+		}
+		let end = ()=>{
+			this.dom.removeEventListener("touchmove", move);
+			this.dom.removeEventListener("touchend", end);
+		}
+		this.dom.addEventListener("touchmove", move);
+		this.dom.addEventListener("touchend", end);
 	}
 
 }
