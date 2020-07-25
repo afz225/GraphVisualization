@@ -11,14 +11,14 @@ class Graph{
 		this.edges = edges;
 	}
 	translateGraph(vector){
-		let edges = this.edges.slice();
+		let edges = Object.assign({}, this.edges);
 		let nodes = this.nodes.map(node => {
 			return {x: node.x + vector.x, y: node.y + vector.y};
 		})
 		return new Graph(nodes, edges);
 	}
 	translateNode(index, vector){
-		let edges = this.edges.slice();
+		let edges = Object.assign({}, this.edges);
 		let nodes = this.nodes.slice();
 		nodes[index] = {x: nodes[index].x + vector.x, y: nodes[index].y + vector.y};
 		return new Graph(nodes, edges);
@@ -75,11 +75,12 @@ class CanvasGraph{
 	}
 
 	touch(event, inputHandler){
-		console.log("been");
+
 		var rect = event.target.getBoundingClientRect();
 		let pos = {x: event.touches[0].clientX-rect.left, y: event.touches[0].clientY-rect.top};
 		event.preventDefault();
 		let moveHandler = inputHandler(pos);
+		
 		let move = (moveEvent)=>{
 			let npos = {x: moveEvent.touches[0].clientX-rect.left, y: moveEvent.touches[0].clientY-rect.top};
 			if (npos.x == pos.x && 
@@ -92,8 +93,10 @@ class CanvasGraph{
 			this.dom.removeEventListener("touchmove", move);
 			this.dom.removeEventListener("touchend", end);
 		}
-		this.dom.addEventListener("touchmove", move);
-		this.dom.addEventListener("touchend", end);
+		if (moveHandler){
+			this.dom.addEventListener("touchmove", move);
+			this.dom.addEventListener("touchend", end);
+		}
 	}
 
 }
@@ -134,6 +137,8 @@ class MoveControl {
 	}
 }
 
+
+
 class App{
 	constructor(state, config){
 		let {controls, dispatch} = config;
@@ -170,21 +175,20 @@ class App{
 
 
 function drawGraph(graph, canvas){
-	for (let edge of graph.edges){
-		drawEdge(graph, edge, canvas);
+	for (let from of Object.keys(graph.edges)){
+		graph.edges[from].forEach(to => drawEdge(graph, from, to, canvas));
 	}
 	for (let node of graph.nodes){
 		drawNode(node, canvas);
 	}
 }
 
-function drawEdge(graph, edge, canvas){
+function drawEdge(graph, from, to, canvas){
 	let cx = canvas.getContext("2d");
-
 	cx.beginPath();
-	cx.moveTo(graph.nodes[edge.from].x, graph.nodes[edge.from].y);
+	cx.moveTo(graph.nodes[from].x, graph.nodes[from].y);
 	cx.lineWidth = 5;
-	cx.lineTo(graph.nodes[edge.to].x, graph.nodes[edge.to].y);
+	cx.lineTo(graph.nodes[to].x, graph.nodes[to].y);
 	cx.closePath();
 	cx.stroke();
 }
@@ -220,7 +224,7 @@ function onNode(pos, graph){
 const DEFAULTCONTROLS = [MoveControl];
 
 const DEFAULTSTATE = {
-	graph: new Graph([{x:400,y:400}, {x:500, y:500}], [{from: 0, to: 1}]),
+	graph: new Graph([{x:400,y:400}, {x:500, y:500}], {0: [1]}),
 	control: MoveControl
 }
 
