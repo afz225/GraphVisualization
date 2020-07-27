@@ -5,6 +5,10 @@
 	<title>GrAnimation - Graph Algorithm Visualization Tool</title>
 </head>
 <body onresize="refresh()">
+
+		
+
+	
 	<div class="menu-bar">
 		<a>Graph Tool</a>
 		<a>About</a>
@@ -15,8 +19,14 @@
 			<canvas style="height:100%; width:100%; display: block"></canvas>
 		</div>
 		<div>
-			<button id="move">Move</button>>
+			<button id="addNode" class="control">Add Node</button>
+			<button id="addEdge" class="control">Add Edge</button>
+			<button id="move" class="control">Move</button>>
 		</div>>
+		<div id="edgeProperties">
+			<label style="display: block">Directed Edge: <input type="checkbox" id="directed" ></input></label>
+			<label style="display: block">Edge Weight (Capacity): <input type="text" id="edgeWeight" value="1"></input></label>
+		</div>
 	</div>
 </body>
 

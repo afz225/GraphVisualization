@@ -6,7 +6,7 @@ const NODERADIUS = 20;
 
 
 class Graph{
-	constructor(nodes = [], edges = []){
+	constructor(nodes = [], edges = {}){
 		this.nodes = nodes;
 		this.edges = edges;
 	}
@@ -23,13 +23,38 @@ class Graph{
 		nodes[index] = {x: nodes[index].x + vector.x, y: nodes[index].y + vector.y};
 		return new Graph(nodes, edges);
 	}
-}
+
+	addNode(pos){
+		return new Graph([...this.nodes, {x: pos.x, y: pos.y}], Object.assign({}, this.edges));
+	}
+	addEdge(from, to, directed = true){
+		let edges = Object.assign({}, this.edges);
+		if (this.edges[from] == undefined)
+			edges[from] = [];
+		if (!directed && this.edges[to] == undefined)
+			edges[to] = [];
+		
+		if (to in edges[from]){
+			return new Graph([...this.nodes], Object.assign({}, this.edges));
+		}
+
+		edges[from].push(to);
+		if (!directed && !(from in edges[to])){
+			edges[to].push(from);
+			console.log("hehe")
+		}
+		
+		return new Graph([...this.nodes], edges);
+		}
+	}
+
+
 
 class CanvasGraph{
-	constructor (graph, inputHandler){
+	constructor (graph, inputHandler, dispatch){
 		this.dom = document.querySelector("canvas");
-		this.dom.onmousedown = event => this.mouse(event, inputHandler);
-		this.dom.ontouchstart = event => this.touch(event, inputHandler);
+		this.dom.onmousedown = event => this.mouse(event, inputHandler, dispatch);
+		this.dom.ontouchstart = event => this.touch(event, inputHandler, dispatch);
 		this.syncState(graph);
 	}
 
@@ -57,8 +82,9 @@ class CanvasGraph{
 		let pos = {x: event.offsetX, y: event.offsetY};
 		let moveHandler = inputHandler(pos);
 		let move = (moveEvent)=>{
-			if (moveEvent.buttons == 0)
+			if (moveEvent.buttons == 0){
 				this.dom.removeEventListener("mousemove", move);
+			}
 			else {
 				if (moveEvent.offsetX == pos.x &&
 					moveEvent.offsetY == pos.y)
@@ -82,6 +108,7 @@ class CanvasGraph{
 		let moveHandler = inputHandler(pos);
 		
 		let move = (moveEvent)=>{
+			event.preventDefault();
 			let npos = {x: moveEvent.touches[0].clientX-rect.left, y: moveEvent.touches[0].clientY-rect.top};
 			if (npos.x == pos.x && 
 				npos.y == pos.y)
@@ -96,6 +123,7 @@ class CanvasGraph{
 		if (moveHandler){
 			this.dom.addEventListener("touchmove", move);
 			this.dom.addEventListener("touchend", end);
+			
 		}
 	}
 
@@ -137,6 +165,64 @@ class MoveControl {
 	}
 }
 
+class AddNode{
+	constructor(state, {dispatch}){
+		this.dom = document.querySelector("#addNode");
+		this.dom.onclick = () =>{
+			dispatch({control: AddNode});
+		}
+		this.graph = state.graph;
+	}
+
+	syncState(state){
+		this.graph = state.graph;
+	}
+
+	tool(pos, dispatch){
+		if (onNode(pos, this.graph) !== undefined)
+			return;
+		dispatch({graph: this.graph.addNode(pos)});
+
+	}
+}
+
+class AddEdge{
+	constructor(state, {dispatch}){
+		this.dom = document.querySelector("#addEdge");
+		this.dom.onclick = ()=>{
+			document.querySelector("#edgeProperties").style.display = "block";
+			dispatch({control: AddEdge});
+		}
+		this.graph = state.graph;
+	}
+
+	syncState(state){
+		this.graph = state.graph;
+	}
+
+	tool(pos, dispatch){
+		let fromNode = onNode(pos, this.graph);
+		if (fromNode === undefined){
+			console.log("Please select a node");
+			return;
+		}
+		let gr = this.graph;
+		function addEdge(npos){
+			let toNode = onNode(npos, gr);
+			if (toNode === fromNode || toNode === undefined){
+				return;
+			}
+			if (gr.edges[fromNode] != undefined && toNode in gr.edges[fromNode]){
+				return;
+			}
+			let {directed, weight} = edgeInput();
+			dispatch({graph: gr.addEdge(fromNode, toNode, directed)});
+			
+		}
+		addEdge(pos);
+		return addEdge;
+	}
+}
 
 
 class App{
@@ -150,8 +236,7 @@ class App{
 				let moveHandler = ctrl.tool(pos, dispatch);
 				if (moveHandler)
 					return pos => moveHandler(pos);
-			}
-			);
+			});
 		this.controls = controls.map(
 			control => new control(state, config)
 		)
@@ -178,9 +263,12 @@ function drawGraph(graph, canvas){
 	for (let from of Object.keys(graph.edges)){
 		graph.edges[from].forEach(to => drawEdge(graph, from, to, canvas));
 	}
+	
 	for (let node of graph.nodes){
 		drawNode(node, canvas);
 	}
+
+	
 }
 
 function drawEdge(graph, from, to, canvas){
@@ -188,7 +276,7 @@ function drawEdge(graph, from, to, canvas){
 	cx.beginPath();
 	cx.moveTo(graph.nodes[from].x, graph.nodes[from].y);
 	cx.lineWidth = 5;
-	cx.lineTo(graph.nodes[to].x, graph.nodes[to].y);
+	cx.lineTo(graph.nodes[to].x, graph.nodes[to].y); 
 	cx.closePath();
 	cx.stroke();
 }
@@ -205,6 +293,7 @@ function drawNode(node, canvas){
 	cx.fill();
 }
 
+
 function stateUpdate(state, action){
 	return Object.assign({}, state, action);
 }
@@ -219,12 +308,25 @@ function onNode(pos, graph){
 	return selectIndex;
 }
 
+function edgeInput(){
+	let isdirected, edgeweight;
+	function getInput(){
+		let tempdirected, tempweight;
+		tempdirected = document.querySelector("#directed").checked;
+		tempweight = document.querySelector("#edgeWeight").value;
+		isdirected = tempdirected;
+		edgeweight = tempweight;
+	}
+	getInput();
+	return {directed:isdirected, weight: edgeweight};
+}
+
 // -------------------------------------------------Constants-------------------------------------------------------------------------
 
-const DEFAULTCONTROLS = [MoveControl];
+const DEFAULTCONTROLS = [AddNode, AddEdge, MoveControl];
 
 const DEFAULTSTATE = {
-	graph: new Graph([{x:400,y:400}, {x:500, y:500}], {0: [1]}),
+	graph: new Graph(),
 	control: MoveControl
 }
 
