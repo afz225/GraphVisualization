@@ -66,15 +66,29 @@ class Graph{
 		let g = new Graph(Object.assign({}, this.nodes), Object.assign({}, this.edges), this.maxNodeID);
 
 		let i = g.edges[from].indexOf(edge);
-		console.log(i);
-		if (i !== -1)
-			g.edges[from].splice(i,1);
+		let weight;
+		if (i !== -1){
+			weight = g.edges[from][i].weight;
+			g.edges[from].splice(i,1);	
+		}
 
-		if (g.edges[edge.to].some((e)=>{return e.to === from;})){
-
+		// ensures undirected edges are deleted completely (if the edge has the same weight both directions)
+		if (g.edges[edge.to]){
+			let e = g.edges[edge.to].filter(e=>{return e.to === from})[0];
+			if (e && e.weight === weight){
+				i = g.edges[edge.to].indexOf(e);
+				g.edges[edge.to].splice(i, 1);
+			}
 		}
 
 		return g;
+	}
+	isDirected(from, to){
+		if (this.edges[to] === undefined)
+			return true;
+		let e = this.edges[to].filter(e=>{return e.to === from})[0];
+		let weight = this.edges[from].filter(e=>{return e.to = to})[0].weight;
+		return (!e || e.weight !== weight);
 	}
 }
 
@@ -97,10 +111,9 @@ class CanvasGraph{
 	refreshCanvas() {
 		let displayHeight = this.dom.clientHeight;
 		let displayWidth = this.dom.clientWidth;
-
 		if (displayHeight != this.dom.height ||
 			displayWidth != this.dom.width){
-			this.dom.height = displayHeight;
+			this.dom.height = displayHeight ;
 			this.dom.width = displayWidth;
 		}else{
 			this.dom.getContext("2d").clearRect(0,0,this.dom.clientWidth, this.dom.clientHeight);
@@ -292,6 +305,32 @@ class DeleteControl{
 	}
 }
 
+class AlgorithmSelect{
+	constructor(state, {dispatch}){
+		this.algorithms = ["Dijkstra's Algorithm"];
+		this.dom = document.querySelector("#algoSelect");
+		this.selected = this.algorithms[0];
+		this.algorithms.forEach(algo=>{
+			let algoOption = document.createElement("option");
+			algoOption.textContent = algo;
+			this.dom.appendChild(algoOption);
+		})
+		this.dom.onchange = ()=>{
+			this.selected = this.dom.selected;
+			dispatch({algorithm: this.selected});
+		};
+		this.graph = state.graph;
+
+	}
+	syncState(state){
+		this.graph = state.graph;
+	}
+	tool(pos, dispatch){
+		
+		return;
+	}
+}
+
 
 class App{
 	constructor(state, config){
@@ -337,6 +376,8 @@ function drawGraph(graph, canvas){
 		drawNode(graph.nodes[id], canvas);
 	}
 
+
+
 	
 }
 
@@ -348,6 +389,46 @@ function drawEdge(graph, from, to, canvas){
 	cx.lineTo(graph.nodes[to].x, graph.nodes[to].y); 
 	cx.closePath();
 	cx.stroke();
+
+	// edge weight drawing
+	let midx, midy;
+	midx = (graph.nodes[to].x+graph.nodes[from].x)/2;
+	midy = (graph.nodes[to].y+graph.nodes[from].y)/2;
+	let weight = graph.edges[from].filter(e=>{return e.to === to;})[0].weight;
+	cx.font = "20px Arial";
+	let textWidth = cx.measureText(weight).width;
+	cx.fillStyle = "white";
+	cx.fillRect(midx - textWidth,midy-15, textWidth*2, 30);
+	cx.strokeRect(midx - textWidth,midy-15, textWidth*2, 30);
+	cx.lineWidth = 1;
+	cx.fillStyle ="white";
+	cx.fill()
+
+	cx.fillStyle="black";
+	cx.fillText(weight, midx - textWidth/2, midy + 7.5);
+
+	// arrow head drawing for directed edges
+	if (graph.isDirected(from, to)){
+		let angle = Math.atan((graph.nodes[to].y - graph.nodes[from].y)/(graph.nodes[to].x - graph.nodes[from].x));
+		console.log(angle)
+		cx.translate(...Object.values(arrowPos(graph, from, to)));
+		if (angle === NaN){
+			if (graph.nodes[to].y > graph.nodes[from].y)
+				cx.rotate(1/2 * Math.pi);
+			else
+				cx.rotate(-1/2 * Math.pi);
+		}else{
+			cx.rotate(angle);
+		}
+		cx.beginPath();
+		cx.moveTo(((graph.nodes[to].x> graph.nodes[from].x)?-1:1) * 10, -10);
+		cx.lineTo(0,0);
+		cx.lineTo(((graph.nodes[to].x> graph.nodes[from].x)?-1:1) * 10, 10);
+		cx.lineWidth = EDGEWIDTH;
+		cx.stroke();
+		cx.resetTransform();
+	}
+
 }
 
 function drawNode(node, canvas){
@@ -400,17 +481,46 @@ function distanceToEdge(graph, pos, from, to){
 	return (Math.abs(a*pos.x + b*pos.y + c))/(Math.sqrt(a*a + b*b));
 }
 
+function arrowPos(graph, from, to){
+	let m = (graph.nodes[to].y - graph.nodes[from].y)/(graph.nodes[to].x - graph.nodes[from].x);
+	console.log(m)
+	if (m == Infinity || m == -Infinity){
+
+		return (graph.nodes[to].y > graph.nodes[from].y)?{x:graph.nodes[to].x, y: graph.nodes[to].y - NODERADIUS} : {x: graph.nodes[to].x, y: graph.nodes[to].y + NODERADIUS};
+	} else if (m == 0){
+		return (graph.nodes[to].x > graph.nodes[from].x)?{x: graph.nodes[to].x - NODERADIUS, y: graph.nodes[to].y} : {x: graph.nodes[to].x + NODERADIUS, y: graph.nodes[to].y};
+	} else {
+		let a = (m*m + 1);
+		let yIntercept = graph.nodes[to].y - m*(graph.nodes[to].x);
+		let b = (2*yIntercept*m -2*m*graph.nodes[to].y -2*graph.nodes[to].x);
+		let c = (yIntercept*yIntercept - 2*yIntercept*graph.nodes[to].y - NODERADIUS*NODERADIUS + graph.nodes[to].x*graph.nodes[to].x + graph.nodes[to].y*graph.nodes[to].y);
+
+		let root1 = (-b+Math.sqrt(b*b - 4*a*c))/(2*a);
+		let root2 = (-b-Math.sqrt(b*b - 4*a*c))/(2*a);
+
+
+		let arrowx;
+		if (graph.nodes[to].x > graph.nodes[from].x){
+			arrowx = (root1 < root2)? root1:root2;
+		} else {
+			arrowx = (root1 < root2)? root2:root1;
+		}
+		// console.log(graph.nodes[to].x, graph.nodes[to].y,"arrow pos",arrowx, m*arrowx+yIntercept);
+		return {x: arrowx, y: m*arrowx + yIntercept};
+	}
+}
+
 // -------------------------------------------------Constants-------------------------------------------------------------------------
 
-const DEFAULTCONTROLS = [AddNode, AddEdge, MoveControl, DeleteControl];
+const DEFAULTCONTROLS = [AlgorithmSelect, AddNode, AddEdge, MoveControl, DeleteControl];
 
 const DEFAULTSTATE = {
 	graph: new Graph(),
-	control: MoveControl
+	control: MoveControl,
+	algorithm: "Dijkstra's Algorithm"
 }
 
 // -------------------------------------------------Body-------------------------------------------------------------------------
-
 
 let state = DEFAULTSTATE;
 let app = new App(state, 
@@ -420,6 +530,9 @@ let app = new App(state,
 			app.syncState(state);
 		}
 	})
+
+
+
 
 
 // refresh function acts as a throttle for the refreshCanvas function for better performance when resizing window
