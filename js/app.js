@@ -7,8 +7,9 @@ const EDGEWIDTH = 5;
 
 
 class Graph{
-	constructor(nodes = {}, edges = {}, maxNodeID = 0){
-		this.maxNodeID = maxNodeID;
+	static maxNodeID = 0;
+
+	constructor(nodes = {}, edges = {}){
 		this.nodes = nodes;
 		this.edges = edges;
 	}
@@ -18,41 +19,45 @@ class Graph{
 		Object.keys(this.nodes).forEach(key => {
 			nodes[key] = {x: this.nodes[key].x + vector.x, y: this.nodes[key].y + vector.y};
 		});
-		return new Graph(nodes, edges, this.maxNodeID);
+		return new Graph(nodes, edges);
 	}
 	translateNode(id, vector){
 		let edges = Object.assign({}, this.edges);
 		let nodes = Object.assign({}, this.nodes)
 		nodes[id] = {x: this.nodes[id].x + vector.x, y: this.nodes[id].y + vector.y};
-		return new Graph(nodes, edges, this.maxNodeId);
+		return new Graph(nodes, edges);
 	}
 
 	addNode(pos){
 		let nodes = Object.assign({}, this.nodes);
-		nodes[this.maxNodeID] = {x: pos.x, y: pos.y};
-		return new Graph(nodes, Object.assign({}, this.edges), this.maxNodeID + 1);
+		nodes[Graph.maxNodeID] = {x: pos.x, y: pos.y};
+		Graph.maxNodeID++;
+		return new Graph(nodes, Object.assign({}, this.edges));
 	}
 
 	addEdge(from, to, edgeWeight = 1, directed = true){
 		let edges = Object.assign({}, this.edges);
-		if (this.edges[from] == undefined)
-			edges[from] = [];
-		if (!directed && this.edges[to] == undefined)
-			edges[to] = [];
-		
-		if (edges[from].some((edge)=>{return edge.to === to;})){
-			return new Graph(Object.assign({}, this.nodes), Object.assign({}, this.edges, this.maxNodeID));
+		if (!directed){
+			if (edges[to] === undefined || !(edges[to].some(edge => {return edge.to === from}))){
+				edges[to] = edges[to] || [];
+				edges[to].push({to: from, weight: edgeWeight});
+			}
+			if (edges[from] === undefined || !(edges[from].some(edge => {return edge.to === to}))){
+				edges[from] = edges[from] || [];
+				edges[from].push({to: to, weight: edgeWeight});
+				console.log(edges[from])
+			}
+		} else {
+			if (edges[from] === undefined || !(edges[from].some(edge => {return edge.to === to}))){
+				edges[from] = edges[from] || [];
+				edges[from].push({to: to, weight: edgeWeight});
+				console.log(edges[from])
+			}
 		}
-
-		edges[from].push({to: to, weight: edgeWeight});
-		if (!directed && !(edges[to].some((edge)=>{return edge.to === from;}))){
-			edges[to].push({to: from, weight: edgeWeight});
-		}
-		
-		return new Graph(Object.assign({}, this.nodes), edges, this.maxNodeID);
-		}
+		return new Graph(Object.assign({}, this.nodes), edges);
+	}
 	deleteNode(id){
-		let g = new Graph(Object.assign({}, this.nodes), Object.assign({}, this.edges), this.maxNodeID);
+		let g = new Graph(Object.assign({}, this.nodes), Object.assign({}, this.edges));
 		delete g.edges[id];
 		Object.keys(g.edges).forEach(from => {
 			g.edges[from] = g.edges[from].filter(edge => {return edge.to !== id;})
@@ -63,7 +68,7 @@ class Graph{
 
 	deleteEdge(from, edge){
 
-		let g = new Graph(Object.assign({}, this.nodes), Object.assign({}, this.edges), this.maxNodeID);
+		let g = new Graph(Object.assign({}, this.nodes), Object.assign({}, this.edges));
 
 		let i = g.edges[from].indexOf(edge);
 		let weight;
@@ -90,6 +95,7 @@ class Graph{
 		let weight = this.edges[from].filter(e=>{return e.to = to})[0].weight;
 		return (!e || e.weight !== weight);
 	}
+
 }
 
 
@@ -239,33 +245,28 @@ class AddEdge{
 			dispatch({control: AddEdge});
 		}
 		this.graph = state.graph;
+		this.tempEdge = state.tempEdge;
 	}
 
 	syncState(state){
 		this.graph = state.graph;
+		this.tempEdge = state.tempEdge;
 	}
 
 	tool(pos, dispatch){
-		let fromNode = onNode(pos, this.graph);
-		if (fromNode === undefined){
+		let node = onNode(pos, this.graph);
+		if (node === undefined){
 			console.log("Please select a node");
 			return;
 		}
-		let gr = this.graph;
-		function addEdge(npos){
-			let toNode = onNode(npos, gr);
-			if (toNode === fromNode || toNode === undefined){
-				return;
-			}
-			if (gr.edges[fromNode] != undefined && gr.edges[fromNode].some((edge)=>{return edge.to === toNode;})){
-				return;
-			}
+		if (this.tempEdge === undefined){
+			dispatch({tempEdge: node})
+		} else {
 			let {directed, weight} = edgeInput();
-			dispatch({graph: gr.addEdge(fromNode, toNode, weight, directed)});
-			
+			dispatch({graph: this.graph.addEdge(this.tempEdge, node, weight, directed), tempEdge: undefined});
 		}
-		addEdge(pos);
-		return addEdge;
+	
+
 	}
 }
 
@@ -410,7 +411,6 @@ function drawEdge(graph, from, to, canvas){
 	// arrow head drawing for directed edges
 	if (graph.isDirected(from, to)){
 		let angle = Math.atan((graph.nodes[to].y - graph.nodes[from].y)/(graph.nodes[to].x - graph.nodes[from].x));
-		console.log(angle)
 		cx.translate(...Object.values(arrowPos(graph, from, to)));
 		if (angle === NaN){
 			if (graph.nodes[to].y > graph.nodes[from].y)
@@ -454,7 +454,6 @@ function distance(x1, y1, x2, y2){
 
 function onNode(pos, graph){
 	let selectID;
-	// graph.nodes.forEach((node, index)=> selectIndex = (distance(pos.x, pos.y, node.x, node.y) <= NODERADIUS)?index: selectIndex);
 	Object.keys(graph.nodes).forEach(id => {
 		selectID = (distance(pos.x, pos.y, graph.nodes[id].x, graph.nodes[id].y) <= NODERADIUS)?id: selectID;
 	})
@@ -483,7 +482,6 @@ function distanceToEdge(graph, pos, from, to){
 
 function arrowPos(graph, from, to){
 	let m = (graph.nodes[to].y - graph.nodes[from].y)/(graph.nodes[to].x - graph.nodes[from].x);
-	console.log(m)
 	if (m == Infinity || m == -Infinity){
 
 		return (graph.nodes[to].y > graph.nodes[from].y)?{x:graph.nodes[to].x, y: graph.nodes[to].y - NODERADIUS} : {x: graph.nodes[to].x, y: graph.nodes[to].y + NODERADIUS};
@@ -505,7 +503,6 @@ function arrowPos(graph, from, to){
 		} else {
 			arrowx = (root1 < root2)? root2:root1;
 		}
-		// console.log(graph.nodes[to].x, graph.nodes[to].y,"arrow pos",arrowx, m*arrowx+yIntercept);
 		return {x: arrowx, y: m*arrowx + yIntercept};
 	}
 }
@@ -517,7 +514,7 @@ const DEFAULTCONTROLS = [AlgorithmSelect, AddNode, AddEdge, MoveControl, DeleteC
 const DEFAULTSTATE = {
 	graph: new Graph(),
 	control: MoveControl,
-	algorithm: "Dijkstra's Algorithm"
+	algorithm: "Dijkstra's Algorithm",
 }
 
 // -------------------------------------------------Body-------------------------------------------------------------------------
