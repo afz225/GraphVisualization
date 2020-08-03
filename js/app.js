@@ -6,8 +6,8 @@ const NODERADIUS = 20;
 const EDGEWIDTH = 5;
 
 
+
 class Graph{
-	static maxNodeID = 0;
 
 	constructor(nodes = {}, edges = {}){
 		this.nodes = nodes;
@@ -31,30 +31,29 @@ class Graph{
 	addNode(pos){
 		let nodes = Object.assign({}, this.nodes);
 		nodes[Graph.maxNodeID] = {x: pos.x, y: pos.y};
-		Graph.maxNodeID++;
+		console.log(Graph.maxNodeID);
+		Graph.maxNodeID += 1;
+
 		return new Graph(nodes, Object.assign({}, this.edges));
 	}
 
-	addEdge(from, to, edgeWeight = 1, directed = true){
-		let edges = Object.assign({}, this.edges);
-		if (!directed){
-			if (edges[to] === undefined || !(edges[to].some(edge => {return edge.to === from}))){
-				edges[to] = edges[to] || [];
-				edges[to].push({to: from, weight: edgeWeight});
-			}
-			if (edges[from] === undefined || !(edges[from].some(edge => {return edge.to === to}))){
-				edges[from] = edges[from] || [];
-				edges[from].push({to: to, weight: edgeWeight});
-				console.log(edges[from])
-			}
-		} else {
-			if (edges[from] === undefined || !(edges[from].some(edge => {return edge.to === to}))){
-				edges[from] = edges[from] || [];
-				edges[from].push({to: to, weight: edgeWeight});
-				console.log(edges[from])
-			}
+	addEdge(edgeFrom, edgeTo, edgeWeight = 1, directed = true){
+		let g = new Graph (Object.assign({}, this.nodes), Object.assign({}, this.edges));
+		
+		if (!directed && (g.edges[edgeTo]=== undefined || !({to: edgeFrom, weight: edgeWeight} in g.edges[edgeTo]))){
+			console.log("to edges before", g.edges[edgeTo])
+			g.edges[edgeTo] = g.edges[edgeTo] || [];
+			g.edges[edgeTo].push({to: edgeFrom, weight: edgeWeight});
+			console.log("to edges after", g.edges[edgeTo])
 		}
-		return new Graph(Object.assign({}, this.nodes), edges);
+
+		if (g.edges[edgeFrom]=== undefined || !({to: edgeTo, weight: edgeWeight} in g.edges[edgeFrom])){
+			console.log("from edges before", g.edges[edgeFrom])
+			g.edges[edgeFrom] = g.edges[edgeFrom] || [];
+			g.edges[edgeFrom].push({to: edgeTo, weight: edgeWeight});
+			console.log("from edges after", g.edges[edgeFrom])
+		}
+		return g;
 	}
 	deleteNode(id){
 		let g = new Graph(Object.assign({}, this.nodes), Object.assign({}, this.edges));
@@ -88,6 +87,7 @@ class Graph{
 
 		return g;
 	}
+	
 	isDirected(from, to){
 		if (this.edges[to] === undefined)
 			return true;
@@ -97,7 +97,7 @@ class Graph{
 	}
 
 }
-
+Graph.maxNodeID = 0;
 
 
 class CanvasGraph{
@@ -183,6 +183,7 @@ class MoveControl {
 		this.dom = document.querySelector("#move");
 		this.dom.onclick = ()=> {
 			document.querySelector("#edgeProperties").style.display = "none";
+
 			dispatch({control: MoveControl});
 		}
 		this.graph = state.graph;
@@ -205,10 +206,12 @@ class MoveControl {
 		
 		function moveCanvas(npos){
 			let translate = {x: (npos.x - pos.x), y: (npos.y-pos.y)};
+
 			dispatch({graph: gr.translateGraph(translate)});
 		}
 		function moveNode(npos){
 			let translate = {x: (npos.x - pos.x), y: (npos.y-pos.y)};
+
 			dispatch({graph: gr.translateNode(index, translate)});
 		}
 
@@ -220,6 +223,7 @@ class AddNode{
 		this.dom = document.querySelector("#addNode");
 		this.dom.onclick = () =>{
 			document.querySelector("#edgeProperties").style.display = "none";
+
 			dispatch({control: AddNode});
 		}
 		this.graph = state.graph;
@@ -255,6 +259,7 @@ class AddEdge{
 
 	tool(pos, dispatch){
 		let node = onNode(pos, this.graph);
+		console.log("id", node);
 		if (node === undefined){
 			console.log("Please select a node");
 			return;
@@ -262,10 +267,15 @@ class AddEdge{
 		if (this.tempEdge === undefined){
 			dispatch({tempEdge: node})
 		} else {
+			if (node === this.tempEdge){
+				return;
+			}
+			console.log("-------------------------------------");
 			let {directed, weight} = edgeInput();
+			console.log("pre-dispatch graph", this.graph);
 			dispatch({graph: this.graph.addEdge(this.tempEdge, node, weight, directed), tempEdge: undefined});
 		}
-	
+		
 
 	}
 }
@@ -281,12 +291,13 @@ class DeleteControl{
 	}
 
 	syncState(state){
+		console.log("synced graph", state.graph);
 		this.graph = state.graph;
 	}
 
 	tool(pos, dispatch){
 		let nodeID = onNode(pos, this.graph);
-		if (nodeID){
+		if (nodeID !== undefined){
 			dispatch({graph: this.graph.deleteNode(nodeID)});
 		} else {
 			// let edge;
@@ -353,9 +364,12 @@ class App{
 	}
 
 	syncState(state){
+		
+		console.log("app graph", state.graph);
 		this.state = state;
 		this.canvas.syncState(state.graph);
 		this.controls.forEach(control => control.syncState(state));
+		console.log("-------------------------------------");
 	}
 }
 
@@ -445,7 +459,11 @@ function drawNode(node, canvas){
 
 
 function stateUpdate(state, action){
-	return Object.assign({}, state, action);
+	let tempState = Object.assign({}, state, action);
+	if (action.hasOwnProperty("graph")){
+		tempState.graph = new Graph(Object.assign({}, action.graph.nodes), Object.assign({}, action.graph.edges));
+	}
+	return tempState;
 }
 
 function distance(x1, y1, x2, y2){
