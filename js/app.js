@@ -91,8 +91,8 @@ class Graph{
 	isDirected(from, to){
 		if (this.edges[to] === undefined)
 			return true;
-		let e = this.edges[to].filter(e=>{return e.to === from})[0];
-		let weight = this.edges[from].filter(e=>{return e.to = to})[0].weight;
+		let e = this.edges[to].filter(e=>{return e.to == from})[0];
+		let weight = this.edges[from].filter(e=>{return e.to == to})[0].weight;
 		return (!e || e.weight !== weight);
 	}
 
@@ -471,7 +471,7 @@ function distance(x1, y1, x2, y2){
 }
 
 function onNode(pos, graph){
-	let selectID;
+	let selectID = undefined;
 	Object.keys(graph.nodes).forEach(id => {
 		selectID = (distance(pos.x, pos.y, graph.nodes[id].x, graph.nodes[id].y) <= NODERADIUS)?id: selectID;
 	})
