@@ -1,3 +1,19 @@
+/*
+*
+* File Name: graph.js
+* Author: Ahmed Elshabrawy
+* Date: August 2020
+* 
+* Summary of file:
+*	This file contians the definition of the main graph object which uses objects to represnt nodes and edges.
+*	Nodes are identified by an id in the nodes object, each node holds its cooridnates on canvas and its color.
+*	The edges object uses an adjacency list representation to actually model the graph. The graph has various
+*	methods that allow modification of the graph both visually and in terms the actual relationship between nodes.
+*	No modifications are actually carried out on a graph object, but a new graph is generated with the desired 
+*	modifications.
+*
+*/
+
 class Graph{
 
 	constructor(nodes = {}, edges = {}){
@@ -22,7 +38,6 @@ class Graph{
 	addNode(pos){
 		let nodes = Object.assign({}, this.nodes);
 		nodes[Graph.maxNodeID] = {x: pos.x, y: pos.y, color: "#008080"};
-		console.log(Graph.maxNodeID);
 		Graph.maxNodeID += 1;
 
 		return new Graph(nodes, Object.assign({}, this.edges));
@@ -32,17 +47,13 @@ class Graph{
 		let g = new Graph (Object.assign({}, this.nodes), Object.assign({}, this.edges));
 		
 		if (!directed && (g.edges[edgeTo]=== undefined || !({to: edgeFrom, weight: edgeWeight} in g.edges[edgeTo]))){
-			console.log("to edges before", g.edges[edgeTo])
 			g.edges[edgeTo] = g.edges[edgeTo] || [];
 			g.edges[edgeTo].push({to: edgeFrom, weight: edgeWeight, color: "#black"});
-			console.log("to edges after", g.edges[edgeTo])
 		}
 
 		if (g.edges[edgeFrom]=== undefined || !({to: edgeTo, weight: edgeWeight} in g.edges[edgeFrom])){
-			console.log("from edges before", g.edges[edgeFrom])
 			g.edges[edgeFrom] = g.edges[edgeFrom] || [];
 			g.edges[edgeFrom].push({to: edgeTo, weight: edgeWeight, color: "#black"});
-			console.log("from edges after", g.edges[edgeFrom])
 		}
 		return g;
 	}
@@ -89,3 +100,6 @@ class Graph{
 
 }
 Graph.maxNodeID = 0;
+
+
+

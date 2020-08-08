@@ -1,3 +1,16 @@
+/*
+*
+* File Name: canvasGraph.js
+* Author: Ahmed Elshabrawy
+* Date: August 2020
+* 
+* Summary of file:
+*	This file contains the class responsible for managing user interaction (mouse or touchscreen) with 
+*	the canvas element, as well as displaying the current state of the application correctly.
+*
+*/
+
+
 class CanvasGraph{
 	constructor (graph, inputHandler){
 		this.dom = document.querySelector("canvas");

@@ -1,9 +1,24 @@
+/*
+*
+* File Name: controlClasses.js
+* Author: Ahmed Elshabrawy
+* Date: August 2020
+* 
+* Summary of file:
+*	This file contains all the definitions of classes associated with the various controls used by the user.
+*	The classes are all organized in a similar pattern with all control classes containing a syncState function 
+*	that appropriately updates any class properties to reflectthe current state of the application, a tool function
+*	which handles the mouse/touch input with an optional moveHandler returned by the tool function in the case that
+*	the mouse needs to be held down (for example dragging to move the graph around).
+*
+*/
 class MoveControl {
 	constructor(state, {dispatch}){
 		this.dom = document.querySelector("#move");
 		this.dom.onclick = ()=> {
 			document.querySelector("#edgeProperties").style.display = "none";
-
+			
+			
 			dispatch({control: MoveControl});
 		}
 		this.graph = state.graph;
@@ -40,10 +55,11 @@ class MoveControl {
 
 class AddNode{
 	constructor(state, {dispatch}){
+		
 		this.dom = document.querySelector("#addNode");
 		this.dom.onclick = () =>{
 			document.querySelector("#edgeProperties").style.display = "none";
-
+			cancelAnimationFrame(reference);
 			dispatch({control: AddNode});
 		}
 		this.graph = state.graph;
@@ -79,7 +95,7 @@ class AddEdge{
 
 	tool(pos, dispatch){
 		let node = onNode(pos, this.graph);
-		console.log("id", node);
+
 		if (node === undefined){
 			console.log("Please select a node");
 			return;
@@ -92,9 +108,9 @@ class AddEdge{
 			if (node === this.tempEdge){
 				return;
 			}
-			console.log("-------------------------------------");
+
 			let {directed, weight} = edgeInput();
-			console.log("pre-dispatch graph", this.graph);
+
 			let g = this.graph.addEdge(this.tempEdge, node, weight, directed);
 			g.nodes[this.tempEdge].color = "#008080";
 			dispatch({graph: g, tempEdge: undefined});
@@ -115,7 +131,6 @@ class DeleteControl{
 	}
 
 	syncState(state){
-		console.log("synced graph", state.graph);
 		this.graph = state.graph;
 	}
 

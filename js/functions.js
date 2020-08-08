@@ -1,3 +1,14 @@
+/*
+*
+* File Name: functions.js
+* Author: Ahmed Elshabrawy
+* Date: August 2020
+* 
+* Summary of file:
+*	This file contains the various helper functions used by the various components of the
+*	entire application.
+*
+*/
 function drawGraph(graph, canvas){
 	for (let from of Object.keys(graph.edges)){
 		graph.edges[from].forEach(edge => {drawEdge(graph, from, edge, canvas);
@@ -19,7 +30,8 @@ function drawEdge(graph, from, edge, canvas){
 	cx.beginPath();
 	cx.moveTo(graph.nodes[from].x, graph.nodes[from].y);
 	cx.lineWidth = EDGEWIDTH;
-	cx.strokeStyle = edge.color
+	cx.strokeStyle = edge.color;
+	console.log(edge.color);
 	cx.lineTo(graph.nodes[to].x, graph.nodes[to].y); 
 	cx.closePath();
 	cx.stroke();
@@ -61,6 +73,7 @@ function drawEdge(graph, from, edge, canvas){
 		cx.stroke();
 		cx.resetTransform();
 	}
+	cx.strokeStyle = "black"
 }
 
 function drawNode(node, canvas){
@@ -73,7 +86,6 @@ function drawNode(node, canvas){
 	cx.strokeStyle = "black";
 	cx.stroke();
 	cx.fillStyle = node.color;
-	console.log(node.color);
 	cx.fill();
 
 }
@@ -145,3 +157,31 @@ function arrowPos(graph, from, to){
 		return {x: arrowx, y: m*arrowx + yIntercept};
 	}
 }
+
+function deepCopy(objIn){
+	if (typeof objIn !== "object" || objIn === null)
+		return objIn;
+	
+	let objOut;
+
+	objOut = (Array.isArray(objIn))? []: {};
+
+	Object.keys(objIn).forEach(key =>{
+		let value = deepCopy(objIn[key]);
+
+		objOut[key] = value;
+	})
+
+	return objOut;
+
+}
+
+window.requestAnimationFrame = window.requestAnimationFrame
+    || window.mozRequestAnimationFrame
+    || window.webkitRequestAnimationFrame
+    || window.msRequestAnimationFrame
+    || function(f){return setTimeout(f, 1000/60)}
+
+window.cancelAnimationFrame = window.cancelAnimationFrame
+    || window.mozCancelAnimationFrame
+    || function(requestID){clearTimeout(requestID)}
