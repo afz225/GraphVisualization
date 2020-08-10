@@ -18,7 +18,7 @@ class MoveControl {
 		this.dom.onclick = ()=> {
 			document.querySelector("#edgeProperties").style.display = "none";
 			
-			
+
 			dispatch({control: MoveControl});
 		}
 		this.graph = state.graph;
@@ -158,7 +158,7 @@ class DeleteControl{
 
 class AlgorithmSelect{
 	constructor(state, {dispatch}){
-		this.algorithms = ["Dijkstra's Algorithm"];
+		this.algorithms = ["Dijkstra's Algorithm", "Bellman-Ford Algorithm"];
 		this.dom = document.querySelector("#algoSelect");
 		this.selected = this.algorithms[0];
 		this.algorithms.forEach(algo=>{
@@ -167,7 +167,7 @@ class AlgorithmSelect{
 			this.dom.appendChild(algoOption);
 		})
 		this.dom.onchange = ()=>{
-			this.selected = this.dom.selected;
+			this.selected = this.dom.options[this.dom.selectedIndex].textContent;
 			dispatch({algorithm: this.selected});
 		};
 		this.graph = state.graph;

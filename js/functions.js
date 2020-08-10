@@ -31,7 +31,6 @@ function drawEdge(graph, from, edge, canvas){
 	cx.moveTo(graph.nodes[from].x, graph.nodes[from].y);
 	cx.lineWidth = EDGEWIDTH;
 	cx.strokeStyle = edge.color;
-	console.log(edge.color);
 	cx.lineTo(graph.nodes[to].x, graph.nodes[to].y); 
 	cx.closePath();
 	cx.stroke();

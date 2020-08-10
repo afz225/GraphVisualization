@@ -68,7 +68,7 @@ class heapPQ{
 				index = i;
 			}
 		})
-		console.log("value", value);
+		console.log(this.data)
 		this.data[index].key = value;
 		this.heapifyUp(index);
 	}
